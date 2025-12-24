@@ -8,7 +8,6 @@ test_local.py
 server.py
 
 # Old documentation with personal paths
-README.md
 README_V2.md
 MIGRATION.md
 GITHUB_SETUP.md
