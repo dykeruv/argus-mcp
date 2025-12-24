@@ -51,9 +51,9 @@ FEATURES:
 - Security (OWASP), performance, and architecture checks
 
 MODELS:
-- glm-4.7 (z.ai) - $0.002/1K tokens, fast
-- gemini-flash (OpenRouter) - $0.001/1K tokens, very fast
-- minimax (OpenRouter) - $0.001/1K tokens
+- glm-4.7 (z.ai) - $0.40/M input, fast
+- gemini-flash (OpenRouter) - $0.50/M input, very fast
+- minimax (OpenRouter) - $0.30/M input
 
 USAGE:
 - \"Review my code\" - basic check
@@ -156,9 +156,9 @@ PURPOSE:
 Changes the base model that will be used for all subsequent code checks if model is not specified explicitly.
 
 AVAILABLE MODELS:
-- glm-4.7 - fast, $0.002/1K tokens (default)
-- gemini-flash - very fast, $0.001/1K tokens
-- minimax - medium speed, $0.001/1K tokens
+- glm-4.7 - fast, $0.40/M input (default)
+- gemini-flash - very fast, $0.50/M input
+- minimax - medium speed, $0.30/M input
 
 USAGE:
 - \"Set Gemini as default model\"

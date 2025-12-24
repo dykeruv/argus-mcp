@@ -192,11 +192,11 @@ How many results are cached?
 
 ## Supported Models
 
-| Model | Provider | Cost | Speed | Quality |
-|-------|----------|------|-------|---------|
-| **GLM 4.7** | z.ai | $0.002/1K | Fast | Excellent |
-| **Gemini 3 Flash Preview** | OpenRouter | $0.001/1K | Very Fast | Excellent |
-| **MiniMax M2.1** | OpenRouter | $0.001/1K | Medium | Good |
+| Model | Provider | Cost (Input) | Speed | Quality |
+|-------|----------|--------------|-------|---------|
+| **GLM 4.7** | z.ai | $0.40/M ($0.0004/1K) | Fast | Excellent |
+| **Gemini 3 Flash Preview** | OpenRouter | $0.50/M ($0.0005/1K) | Very Fast | Excellent |
+| **MiniMax M2.1** | OpenRouter | $0.30/M ($0.0003/1K) | Medium | Good |
 
 ## Language Support
 
