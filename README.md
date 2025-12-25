@@ -142,22 +142,110 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 
 **Other MCP clients:** Follow their reload instructions
 
+## How to Use
+
+### Quick Start
+
+Simply type natural language commands in your IDE:
+
+```
+Review my code
+Check this file
+Verify my changes
+```
+
+Argus MCP automatically detects what to review based on your IDE context.
+
+### How It Works
+
+1. **You write a command** - "Review my code" or "Check this file"
+2. **Your IDE sends context** - Open files, git changes, file paths
+3. **Argus determines mode:**
+   - 1 open file → **Single File** mode (deep review)
+   - Git changes detected → **Git Diff** mode (only changes)
+   - Multiple modified files → **Multiple Files** mode (cross-file analysis)
+4. **AI analyzes code** - Using language-specific checks
+5. **You get structured report** - Must Fix / Should Fix / Suggestions
+
+### Review Modes Explained
+
+**Single File Mode**
+- Full context analysis of one file
+- Deep security, performance, and architecture review
+- Best for: New features, refactoring
+
+**Git Diff Mode**
+- Analyzes only your changes
+- Faster, uses fewer tokens
+- Best for: Pre-commit checks, PR reviews
+
+**Multiple Files Mode**
+- Cross-file dependency analysis
+- Checks consistency between files
+- Best for: Feature spanning multiple files
+
+### What Gets Checked
+
+**Security (OWASP)**
+- SQL injection, XSS, CSRF vulnerabilities
+- Insecure API usage, exposed secrets
+- Authentication/authorization flaws
+
+**Logic & Bugs**
+- Edge cases, race conditions
+- Null pointer exceptions
+- Incorrect error handling
+
+**Performance**
+- N+1 queries, memory leaks
+- Inefficient algorithms
+- Unnecessary computations
+
+**Architecture**
+- SOLID violations, code smells
+- Tight coupling, missing abstractions
+- Inconsistent patterns
+
+**Language-Specific**
+- Python: PEP 8, type hints, async/await
+- JavaScript: ESLint rules, async patterns
+- TypeScript: Strict types, interfaces
+- And more for 10+ languages
+
+### Output Format
+
+```markdown
+### ❌ Must Fix
+- **`auth.py:42`** - SQL injection in user_query
+  Fix: Use parameterized queries
+
+### 🟡 Should Fix  
+- **`api.py:88`** - N+1 query in loop
+  Use select_related() to optimize
+
+### 🟢 Suggestions
+- **`utils.py:12`** - Use .capitalize() instead of slicing
+```
+
+Each issue includes:
+- Exact file path and line number
+- Clear explanation of the problem
+- Why it matters
+- How to fix it (for critical issues)
+
 ## Available Tools
 
 ### 1. verify_code
 
 Performs comprehensive code review with Zero-Trust mindset.
 
-**Modes:**
-- **Single File** - Review one file with full context
-- **Git Diff** - Review changes only (saves tokens)
-- **Multiple Files** - Cross-file dependency analysis
-
-**Usage:**
+**Commands:**
 ```
-Check my work
+Review my code
+Check this file
+Verify my changes
 Review this code with Gemini
-Verify changes in multiple files
+Check code using MiniMax
 ```
 
 ### 2. list_models
