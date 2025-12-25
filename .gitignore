@@ -11,6 +11,7 @@ server.py
 README_V2.md
 MIGRATION.md
 GITHUB_SETUP.md
+PRE_PUSH_CHECKLIST.md
 
 # Python
 __pycache__/
@@ -37,3 +38,6 @@ Thumbs.db
 
 # Config examples with real keys
 mcp_config_example.json
+
+# Internal development files
+.internal/
