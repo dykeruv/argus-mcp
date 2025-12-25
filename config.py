@@ -48,8 +48,9 @@ MODELS = {
         "base_url": GLM_BASE_URL,
         "model_id": "glm-4.7",
         "enabled": bool(GLM_API_KEY),
-        "cost_per_1k_tokens": 0.0004,  # $0.40/M input tokens
-        "max_tokens": 8000,
+        "cost_input_per_1k": 0.0004,  # $0.40/M input
+        "cost_output_per_1k": 0.0015,  # $1.50/M output
+        "max_tokens": 202752,  # Context window
         "timeout": 60
     },
     "gemini-flash": {
@@ -59,8 +60,9 @@ MODELS = {
         "base_url": OPENROUTER_BASE_URL,
         "model_id": "google/gemini-3-flash-preview",
         "enabled": bool(OPENROUTER_API_KEY),
-        "cost_per_1k_tokens": 0.0005,  # $0.50/M input tokens
-        "max_tokens": 8000,
+        "cost_input_per_1k": 0.0005,  # $0.50/M input
+        "cost_output_per_1k": 0.003,  # $3/M output
+        "max_tokens": 1048576,  # Context window
         "timeout": 45
     },
     "minimax": {
@@ -70,8 +72,9 @@ MODELS = {
         "base_url": OPENROUTER_BASE_URL,
         "model_id": "minimax/minimax-01",
         "enabled": bool(OPENROUTER_API_KEY),
-        "cost_per_1k_tokens": 0.0003,  # $0.30/M input tokens
-        "max_tokens": 8000,
+        "cost_input_per_1k": 0.0003,  # $0.30/M input
+        "cost_output_per_1k": 0.0012,  # $1.20/M output
+        "max_tokens": 204800,  # Context window
         "timeout": 60
     }
 }

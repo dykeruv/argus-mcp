@@ -350,7 +350,8 @@ RESULT: Detailed information about cache state""",
                 "name": config["name"],
                 "provider": config["provider"],
                 "enabled": config["enabled"],
-                "cost_per_1k_tokens": config["cost_per_1k_tokens"],
+                "cost_input_per_1k": config["cost_input_per_1k"],
+                "cost_output_per_1k": config["cost_output_per_1k"],
                 "max_tokens": config["max_tokens"]
             })
         
@@ -470,15 +471,16 @@ RESULT: Detailed information about cache state""",
                 result = await self._list_models()
                 
                 # Форматируем вывод
-                models_text = "# Доступные модели\n\n"
+                models_text = "# Available Models\n\n"
                 for model in result["models"]:
                     status = "✅" if model["enabled"] else "❌"
-                    cost = f"${model['cost_per_1k_tokens']:.4f}/1K" if model['cost_per_1k_tokens'] > 0 else "Free"
+                    cost_in = f"${model['cost_input_per_1k']:.4f}/1K in"
+                    cost_out = f"${model['cost_output_per_1k']:.4f}/1K out"
                     
                     models_text += f"{status} **{model['name']}** (`{model['key']}`)\n"
                     models_text += f"   - Provider: {model['provider']}\n"
-                    models_text += f"   - Cost: {cost}\n"
-                    models_text += f"   - Max tokens: {model['max_tokens']}\n\n"
+                    models_text += f"   - Cost: {cost_in}, {cost_out}\n"
+                    models_text += f"   - Context: {model['max_tokens']:,} tokens\n\n"
                 
                 models_text += f"\n**Default model:** `{result['default_model']}`"
                 
