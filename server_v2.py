@@ -201,6 +201,31 @@ RESULT: Detailed information about cache state""",
                     "type": "object",
                     "properties": {}
                 }
+            },
+            "diagnose": {
+                "name": "diagnose",
+                "description": """Diagnose API connectivity and show recent errors.
+
+PURPOSE:
+Helps troubleshoot when code verification fails. Tests connection to each AI provider and shows recent error log.
+
+CHECKS:
+- API key presence for each model
+- Connection test to z.ai and OpenRouter
+- Recent error history with timestamps
+- Recommendations for fixing issues
+
+USAGE:
+- \"Diagnose Argus\"
+- \"Why is verification failing?\"
+- \"Check API status\"
+- \"Show recent errors\"
+
+RESULT: Diagnostic report with connection status and error analysis""",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {}
+                }
             }
         }
 
@@ -398,6 +423,103 @@ RESULT: Detailed information about cache state""",
             "cache": self.cache.stats()
         }
 
+    async def _diagnose(self) -> str:
+        """Диагностика API подключений и ошибок"""
+        import httpx
+        from models import get_error_log, format_error_for_user
+        
+        lines = ["# 🔍 Argus MCP Diagnostics\n"]
+        
+        # 1. Проверка API ключей
+        lines.append("## API Keys Status\n")
+        for model_key, config in MODELS.items():
+            has_key = bool(config.get("api_key"))
+            status = "✅" if has_key else "❌ MISSING"
+            key_preview = config.get("api_key", "")[:8] + "..." if has_key else "Not set"
+            lines.append(f"- **{config['name']}** ({model_key}): {status}")
+            if has_key:
+                lines.append(f"  - Key: `{key_preview}`")
+                lines.append(f"  - Provider: {config['provider']}")
+        
+        # 2. Тест подключения к API
+        lines.append("\n## Connection Tests\n")
+        
+        test_results = []
+        for model_key, config in MODELS.items():
+            if not config.get("enabled"):
+                test_results.append((model_key, "⏭️ Skipped (no API key)", None))
+                continue
+            
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    # Простой тест - отправляем минимальный запрос
+                    headers = {
+                        "Authorization": f"Bearer {config['api_key']}",
+                        "Content-Type": "application/json"
+                    }
+                    if config['provider'] == 'openrouter':
+                        headers["HTTP-Referer"] = "https://argus-mcp-diagnose"
+                    
+                    response = await client.post(
+                        f"{config['base_url']}/chat/completions",
+                        headers=headers,
+                        json={
+                            "model": config['model_id'],
+                            "messages": [{"role": "user", "content": "Hi"}],
+                            "max_tokens": 5
+                        }
+                    )
+                    
+                    if response.status_code == 200:
+                        test_results.append((model_key, "✅ Connected", response.status_code))
+                    else:
+                        error_text = response.text[:100]
+                        test_results.append((model_key, f"❌ HTTP {response.status_code}: {error_text}", response.status_code))
+            
+            except httpx.TimeoutException:
+                test_results.append((model_key, "⏱️ Timeout (>10s)", "TIMEOUT"))
+            except httpx.ConnectError as e:
+                test_results.append((model_key, f"🌐 Connection failed: {str(e)[:50]}", "CONNECT_ERROR"))
+            except Exception as e:
+                test_results.append((model_key, f"❓ Error: {str(e)[:50]}", "ERROR"))
+        
+        for model_key, status, code in test_results:
+            lines.append(f"- **{model_key}**: {status}")
+        
+        # 3. Последние ошибки
+        lines.append("\n## Recent Errors\n")
+        error_log = get_error_log()
+        if error_log:
+            for err in error_log[-5:]:
+                status = f" (HTTP {err['status_code']})" if err.get('status_code') else ""
+                lines.append(f"- `{err['timestamp'][:19]}` **{err['model']}**: {err['error_type']}{status}")
+                lines.append(f"  - {err['details'][:100]}")
+        else:
+            lines.append("No recent errors recorded.")
+        
+        # 4. Рекомендации
+        lines.append("\n## Recommendations\n")
+        
+        # Анализируем результаты тестов
+        failed_tests = [r for r in test_results if "❌" in r[1] or "⏱️" in r[1] or "🌐" in r[1]]
+        
+        if not failed_tests:
+            lines.append("✅ All systems operational!")
+        else:
+            for model_key, status, code in failed_tests:
+                if code == 401:
+                    lines.append(f"- **{model_key}**: Invalid API key. Check `.env` file.")
+                elif code == 429:
+                    lines.append(f"- **{model_key}**: Rate limited. Wait a few minutes.")
+                elif code == "TIMEOUT":
+                    lines.append(f"- **{model_key}**: API slow/overloaded. Try later.")
+                elif code == "CONNECT_ERROR":
+                    lines.append(f"- **{model_key}**: Network issue. Check internet connection.")
+                else:
+                    lines.append(f"- **{model_key}**: Check API provider status page.")
+        
+        return "\n".join(lines)
+
     async def handle_request(self, request: dict) -> dict:
         """Обрабатывает MCP запрос"""
         method = request.get("method", "")
@@ -457,7 +579,22 @@ RESULT: Detailed information about cache state""",
                     content_parts.append(f"\n---\n{model_info}")
                     content = "\n".join(content_parts)
                 else:
-                    content = f"❌ Ошибка проверки: {result['error']}"
+                    # Формируем детальное сообщение об ошибке
+                    error_parts = [f"❌ **Verification Failed**\n"]
+                    error_parts.append(f"**Error:** {result['error']}\n")
+                    
+                    # Добавляем детали ошибок если есть
+                    if result.get("error_details"):
+                        error_parts.append(f"\n**Details:**\n{result['error_details']}\n")
+                    
+                    # Добавляем рекомендации
+                    if result.get("recommendations"):
+                        error_parts.append("\n**Recommendations:**")
+                        for rec in result["recommendations"]:
+                            error_parts.append(f"\n- {rec}")
+                    
+                    error_parts.append("\n\n*Use `Diagnose Argus` for detailed diagnostics*")
+                    content = "".join(error_parts)
 
                 return {
                     "jsonrpc": "2.0",
@@ -520,7 +657,7 @@ RESULT: Detailed information about cache state""",
                 result = await self._cache_stats()
                 
                 cache = result["cache"]
-                stats_text = f"""# Статистика кэша
+                stats_text = f"""# Cache Statistics
 
 **Enabled:** {cache['enabled']}
 **Size:** {cache['size']} / {cache['max_size']}
@@ -531,6 +668,16 @@ RESULT: Detailed information about cache state""",
                     "id": req_id,
                     "result": {
                         "content": [{"type": "text", "text": stats_text}]
+                    }
+                }
+            
+            elif tool_name == "diagnose":
+                result = await self._diagnose()
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [{"type": "text", "text": result}]
                     }
                 }
             

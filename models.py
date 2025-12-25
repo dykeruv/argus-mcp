@@ -4,12 +4,80 @@ Model providers with retry logic and fallback support
 
 import asyncio
 import httpx
-from typing import Dict, Any, Optional
+import sys
+from datetime import datetime
+from typing import Dict, Any, Optional, List
 from config import (
     MODELS, DEFAULT_TEMPERATURE, DEFAULT_MAX_TOKENS,
     RETRY_ATTEMPTS, RETRY_MIN_WAIT, RETRY_MAX_WAIT, RETRY_STATUS_CODES,
     get_fallback_models
 )
+
+
+# Error tracking for diagnostics
+_error_log: List[Dict[str, Any]] = []
+
+
+def log_error(model: str, error_type: str, details: str, status_code: int = None):
+    """Log error for diagnostics"""
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "model": model,
+        "error_type": error_type,
+        "details": details[:500],  # Truncate long errors
+        "status_code": status_code
+    }
+    _error_log.append(entry)
+    # Keep only last 50 errors
+    if len(_error_log) > 50:
+        _error_log.pop(0)
+    # Also print to stderr for debugging
+    print(f"[ARGUS ERROR] {model}: {error_type} - {details[:200]}", file=sys.stderr)
+
+
+def get_error_log() -> List[Dict[str, Any]]:
+    """Get recent errors for diagnostics"""
+    return _error_log.copy()
+
+
+def clear_error_log():
+    """Clear error log"""
+    _error_log.clear()
+
+
+def format_error_for_user(errors: List[Dict[str, Any]]) -> str:
+    """Format errors into human-readable message"""
+    if not errors:
+        return "No errors recorded."
+    
+    lines = ["## Recent Errors\n"]
+    for err in errors[-5:]:  # Last 5 errors
+        status = f" (HTTP {err['status_code']})" if err.get('status_code') else ""
+        lines.append(f"- **{err['model']}**: {err['error_type']}{status}")
+        lines.append(f"  - {err['details'][:150]}")
+    
+    lines.append("\n## Possible Causes\n")
+    
+    # Analyze errors
+    has_401 = any(e.get('status_code') == 401 for e in errors)
+    has_429 = any(e.get('status_code') == 429 for e in errors)
+    has_timeout = any('timeout' in e.get('details', '').lower() for e in errors)
+    has_connection = any('connect' in e.get('details', '').lower() for e in errors)
+    
+    if has_401:
+        lines.append("- **Invalid API Key**: Check your `.env` file. Keys may be expired or incorrect.")
+    if has_429:
+        lines.append("- **Rate Limited**: You've hit the API rate limit. Wait a few minutes.")
+    if has_timeout:
+        lines.append("- **Timeout**: API is slow or overloaded. Try again later or reduce payload size.")
+    if has_connection:
+        lines.append("- **Connection Error**: Network issue. Check your internet connection.")
+    
+    if not (has_401 or has_429 or has_timeout or has_connection):
+        lines.append("- Check API provider status pages (z.ai, OpenRouter)")
+        lines.append("- Verify API keys are valid and have credits")
+    
+    return "\n".join(lines)
 
 
 class ModelProvider:
@@ -122,17 +190,61 @@ class ModelProvider:
             }
         
         except httpx.HTTPStatusError as e:
+            error_msg = f"API Error: {e.response.status_code} - {e.response.text[:300]}"
+            log_error(
+                model=self.model_key,
+                error_type="HTTP Error",
+                details=error_msg,
+                status_code=e.response.status_code
+            )
             return {
                 "success": False,
-                "error": f"API Error: {e.response.status_code} - {e.response.text}",
+                "error": error_msg,
+                "error_code": e.response.status_code,
+                "model": self.config['name'],
+                "model_key": self.model_key
+            }
+        
+        except httpx.TimeoutException as e:
+            error_msg = f"Request timed out after {self.config.get('timeout', 60)}s"
+            log_error(
+                model=self.model_key,
+                error_type="Timeout",
+                details=error_msg
+            )
+            return {
+                "success": False,
+                "error": error_msg,
+                "error_code": "TIMEOUT",
+                "model": self.config['name'],
+                "model_key": self.model_key
+            }
+        
+        except httpx.ConnectError as e:
+            error_msg = f"Connection failed: {str(e)}"
+            log_error(
+                model=self.model_key,
+                error_type="Connection Error",
+                details=error_msg
+            )
+            return {
+                "success": False,
+                "error": error_msg,
+                "error_code": "CONNECTION_ERROR",
                 "model": self.config['name'],
                 "model_key": self.model_key
             }
         
         except Exception as e:
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            log_error(
+                model=self.model_key,
+                error_type=type(e).__name__,
+                details=error_msg
+            )
             return {
                 "success": False,
-                "error": str(e),
+                "error": error_msg,
                 "model": self.config['name'],
                 "model_key": self.model_key
             }
@@ -168,6 +280,8 @@ class ModelManager:
     ) -> Dict[str, Any]:
         """Проверяет код с fallback на другие модели при ошибке"""
         
+        errors_collected = []
+        
         # Пробуем основную модель
         try:
             provider = self.get_provider(primary_model)
@@ -175,10 +289,20 @@ class ModelManager:
             
             if result["success"]:
                 return result
+            else:
+                errors_collected.append({
+                    "model": primary_model,
+                    "error": result.get("error", "Unknown error"),
+                    "error_code": result.get("error_code")
+                })
         
         except Exception as e:
-            # Логируем ошибку, но продолжаем с fallback
-            pass
+            error_msg = f"{type(e).__name__}: {str(e)}"
+            log_error(primary_model, "Provider Error", error_msg)
+            errors_collected.append({
+                "model": primary_model,
+                "error": error_msg
+            })
         
         # Если основная модель не сработала, пробуем fallback
         fallback_models = get_fallback_models(exclude=primary_model)
@@ -193,14 +317,50 @@ class ModelManager:
                     result["fallback_used"] = True
                     result["primary_model_failed"] = primary_model
                     return result
+                else:
+                    errors_collected.append({
+                        "model": model_key,
+                        "error": result.get("error", "Unknown error"),
+                        "error_code": result.get("error_code")
+                    })
             
-            except Exception:
+            except Exception as e:
+                error_msg = f"{type(e).__name__}: {str(e)}"
+                log_error(model_key, "Provider Error", error_msg)
+                errors_collected.append({
+                    "model": model_key,
+                    "error": error_msg
+                })
                 continue
         
-        # Если все модели не сработали
+        # Если все модели не сработали - формируем детальное сообщение
+        error_details = "\n".join([
+            f"  - {e['model']}: {e['error'][:100]}" for e in errors_collected
+        ])
+        
+        # Анализируем типы ошибок для рекомендаций
+        recommendations = []
+        error_codes = [e.get("error_code") for e in errors_collected if e.get("error_code")]
+        error_texts = " ".join([e.get("error", "") for e in errors_collected]).lower()
+        
+        if 401 in error_codes:
+            recommendations.append("🔑 Check API keys in `.env` file")
+        if 429 in error_codes:
+            recommendations.append("⏳ Rate limited - wait a few minutes")
+        if "timeout" in error_texts:
+            recommendations.append("⏱️ Timeout - try smaller code or wait")
+        if "connect" in error_texts:
+            recommendations.append("🌐 Network error - check connection")
+        if not recommendations:
+            recommendations.append("🔍 Check API provider status pages")
+            recommendations.append("💳 Verify API keys have credits")
+        
         return {
             "success": False,
             "error": f"All models failed. Primary: {primary_model}, Fallbacks: {fallback_models}",
+            "error_details": error_details,
+            "recommendations": recommendations,
+            "errors": errors_collected,
             "model": "None",
             "model_key": None
         }
